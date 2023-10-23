@@ -1,20 +1,21 @@
+import os
 import tkinter as tk
-import os.path as op
-import cryptography as cr
 from cryptography.fernet import Fernet
 from tkinter import filedialog
 
-key_loaded = None  # Zmienna do śledzenia statusu klucza
+key_loaded = None
 key_file = None
+
 
 def generate_key(filename):
     key = Fernet.generate_key()
     with open(filename, 'wb') as filekey:
         filekey.write(key)
-        print(f"Plik klucza '{filename}' został wygenerowany!\n")
+        print(f"Plik klucza '{filename}' został wygenerowany!")
 
 def on_generate_key_click():
-    filename = filedialog.asksaveasfilename(defaultextension=".key", filetypes=[("Klucz szyfrowania", "*.key")])
+    initial_dir = os.getcwd()  # Pobierz aktualny katalog roboczy
+    filename = filedialog.asksaveasfilename(initialdir=initial_dir, defaultextension=".key", filetypes=[("Klucz szyfrowania", "*.key")])
     if filename:
         generate_key(filename)
         generate_label.config(text=f"Plik klucza '{filename}' został wygenerowany!")
@@ -29,7 +30,8 @@ def load_key(filename):
         return None
 
 def on_load_key_click():
-    filename = filedialog.askopenfilename(filetypes=[("Klucz szyfrowania", "*.key")])
+    initial_dir = os.getcwd()  # Pobierz aktualny katalog roboczy
+    filename = filedialog.askopenfilename(initialdir=initial_dir, filetypes=[("Klucz szyfrowania", "*.key")])
     if filename:
         global key_loaded
         global key_file
@@ -37,19 +39,28 @@ def on_load_key_click():
         key_file = filename
         if loaded_key:
             key_label.config(text=f"Wczytano klucz: {filename}")
-            key_loaded = True  # Oznacz klucz jako wczytany
+            key_loaded = True
         else:
-            result_label.config(text=f"Błąd przy wczytywaniu klucza.")
-            key_loaded = False  # Oznacz klucz jako niewczytany (jeśli wystąpi błąd)
+            result_label.config(text="Błąd przy wczytywaniu klucza.")
+            key_loaded = False
 
-def encrypt_files(filenames, key):
+def create_encryption_folder(key_file):
+    key_folder = os.path.splitext(os.path.basename(key_file))[0] + " encrypted files"
+    if not os.path.exists(key_folder):
+        os.mkdir(key_folder)
+    return key_folder
+
+def encrypt_files(filenames, key_file):
+    key_folder = create_encryption_folder(key_file)
+    key = load_key(key_file)
+
     for filename in filenames:
         try:
             with open(filename, 'rb') as file_to_encrypt:
                 data = file_to_encrypt.read()
                 encrypted_data = key.encrypt(data)
 
-            encrypted_filename = filename + ".x"
+            encrypted_filename = os.path.join(key_folder, os.path.basename(filename) + ".x")
             with open(encrypted_filename, 'wb') as encrypted_file:
                 encrypted_file.write(encrypted_data)
 
@@ -59,46 +70,64 @@ def encrypt_files(filenames, key):
 
 def on_encrypt_files_click():
     global key_file
-    if key_file is not None:  # Sprawdzamy, czy klucz jest wczytany (nie jest None)
-        key = load_key(key_file)
-        if key:
-            filenames = filedialog.askopenfilenames(filetypes=[("Pliki do zaszyfrowania", "*.*")])
-            if filenames:
-                encrypt_files(filenames, key)
-                encrypt_label.config(text=f"{len(filenames)} plików zostało zaszyfrowanych!")
+    if key_file is not None:
+        filenames = filedialog.askopenfilenames(filetypes=[("Pliki do zaszyfrowania", "*.*")])
+        if filenames:
+            key_folder = create_encryption_folder(key_file)
+            encrypt_files(filenames, key_file)
+            encrypt_label.config(text=f"{len(filenames)} plików zostało zaszyfrowanych w folderze '{key_folder}'")
     else:
         encrypt_label.config(text="Błąd: Żaden klucz nie został wczytany. Wczytaj klucz przed próbą szyfrowania.")
 
-def decrypt_files(filenames, key):
+
+def create_decryption_folder(key_file):
+    key_folder = os.path.splitext(os.path.basename(key_file))[0] + " decrypted files"
+    if not os.path.exists(key_folder):
+        os.mkdir(key_folder)
+    return key_folder
+
+def decrypt_files(filenames, key_file):
+    key_folder = create_decryption_folder(key_file)
+    key = load_key(key_file)
+    decryption_error = False  # Zmienna do śledzenia błędów odszyfrowywania
+    decrypted_count = 0  # Licznik odszyfrowanych plików
+
     for filename in filenames:
         try:
             with open(filename, 'rb') as encrypted_file:
                 encrypted_data = encrypted_file.read()
                 decrypted_data = key.decrypt(encrypted_data)
 
-            decrypted_filename = filename[:-1]  # Usuń ".enc" z nazwy pliku
+            decrypted_filename = os.path.join(key_folder, os.path.basename(filename)[:-2])
             with open(decrypted_filename, 'wb') as decrypted_file:
                 decrypted_file.write(decrypted_data)
 
             print(f"Plik '{filename}' został odszyfrowany jako '{decrypted_filename}'")
+            decrypted_count += 1
         except Exception as e:
             print(f"Błąd przy odszyfrowywaniu pliku '{filename}': {e}")
-            decrypt_label.config(text=f"Błąd przy odszyfrowywaniu pliku '{filename}': {e}")
+            decryption_error = True
+
+    if decryption_error:
+        decrypt_label.config(text="Błąd: Wystąpiły problemy podczas odszyfrowywania niektórych plików. Upewnij się, że używasz odpowiedniego klucza!")
+    else:
+        decrypt_label.config(text=f"{decrypted_count} plików zostało odszyfrowanych w folderze '{key_folder}'")
 
 def on_decrypt_files_click():
     global key_file
-    if key_file is not None:  # Sprawdzamy, czy klucz jest wczytany (nie jest None)
-        key = load_key(key_file)
-        if key:
-            filenames = filedialog.askopenfilenames(filetypes=[("Pliki do odszyfrowania", "*.x")])
-            if filenames:
-                decrypt_files(filenames, key)
-                decrypt_label.config(text=f"{len(filenames)} plików zostało odszyfrowanych!")
+    if key_file is not None:
+        filenames = filedialog.askopenfilenames(filetypes=[("Pliki do odszyfrowania", "*.x")])
+        if filenames:
+            key_folder = create_decryption_folder(key_file)
+            decrypt_files(filenames, key_file)
     else:
         decrypt_label.config(text="Błąd: Żaden klucz nie został wczytany. Wczytaj klucz przed próbą odszyfrowywania.")
 
 root = tk.Tk()
 root.title("Aplikacja Szyfrowania")
+root.geometry("650x200")
+root.update_idletasks()
+root.minsize(650, 200)  # Ustawia minimalny rozmiar na 300x200 pikseli
 
 generate_button = tk.Button(root, text="Generuj klucz", width=50, command=on_generate_key_click)
 generate_button.pack()
