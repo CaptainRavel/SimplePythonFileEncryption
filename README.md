@@ -16,6 +16,6 @@ Program wykorzystuje metodę szyfrowania symetrycznego z jednym kluczem, oznacza
 
 - Szyfrowanie/odszyfrowanie plików za pomocą wczytanego klucza
 
-###### Screnny:
+###### Screenshots:
 
-![](https://img001.prntscr.com/file/img001/glHpCTEYT-2kEuOv7kGw7Q.jpeg)
+![SPFE UI](https://img001.prntscr.com/file/img001/glHpCTEYT-2kEuOv7kGw7Q.jpeg)
