@@ -4,10 +4,13 @@ from AppLogic import AppLogic
 
 class UI:
     def __init__(self, root):
+        # Inicjalizacja obiektu UI
         self.root = root
         self.root.geometry("650x200")
         self.root.update_idletasks()
         self.root.minsize(650, 200)
+
+        # Inicjalizacja logiki aplikacji (klasa AppLogic)
         self.app_logic = AppLogic(self)
 
         # Inicjalizacja atrybutów klasy
@@ -24,6 +27,7 @@ class UI:
         self.create_widgets(root)
 
     def create_widgets(self, root):
+        # Utworzenie i konfiguracja przycisków oraz etykiet
         self.generate_button = tk.Button(root, text="Generuj klucz", width=50, command=self.on_generate_key_click)
         self.generate_button.pack()
         self.generate_label = tk.Label(root, text="")
@@ -42,14 +46,17 @@ class UI:
         self.decrypt_label.pack()
 
     def on_generate_key_click(self):
+        # Wywołanie odpowiedniej metody logiki aplikacji po naciśnięciu przycisku "Generuj klucz"
         self.app_logic.generate_key_ui()
 
     def on_load_key_click(self):
+        # Wywołanie odpowiedniej metody logiki aplikacji po naciśnięciu przycisku "Wczytaj klucz"
         self.app_logic.load_key_ui()
-        print(f"Key File in UI: {self.app_logic.key_file}")
 
     def on_encrypt_files_click(self):
+        # Wywołanie odpowiedniej metody logiki aplikacji po naciśnięciu przycisku "Szyfruj pliki"
         self.app_logic.encrypt_files_ui()
 
     def on_decrypt_files_click(self):
+        # Wywołanie odpowiedniej metody logiki aplikacji po naciśnięciu przycisku "Odszyfruj pliki"
         self.app_logic.decrypt_files_ui()
